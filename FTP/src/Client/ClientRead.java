@@ -40,13 +40,20 @@ public class ClientRead extends Thread {
                     }
                 }
                 else if (msg.equalsIgnoreCase("Download")) {
+                    Boolean access = in.readBoolean();
                     String fileName = in.readUTF();
-                    int chunk = in.readInt();
-                    byte[] buffer = new byte[chunk];
-                    String fileLocation = "./Desktop/"+username+"/"+fileName;
-                    DReceiveFile receiveFile = new DReceiveFile(socket2, fileLocation, buffer);
-                    receiveFile.start();
-                    //receiveFile.join();
+                    if (access) {
+                        int chunk = in.readInt();
+                        byte[] buffer = new byte[chunk];
+                        String fileLocation = "./Desktop/"+username+"/"+fileName;
+                        DReceiveFile receiveFile = new DReceiveFile(socket2, fileLocation, buffer);
+                        receiveFile.start();
+                        //receiveFile.join();
+                    }
+                    else {
+                        System.out.println("You do not have permissions to download this file");
+                    }
+                    
                 }
                 else {
                     System.out.println(msg);

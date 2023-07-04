@@ -33,7 +33,8 @@ public class Server {
     public static HashMap<Long, String> FILES_LOCATION, FILES_NAME;
     public static HashMap<Long, List<String>> REQUEST_USER;
     public static HashMap<String, Long> FILES_ID, REQUEST_ID;
-    volatile Long fileID, requestID;
+    public static List<Long> PUBLIC_FILE_ID;
+    public static Long fileID, requestID;
 
     public Server() {
         CLIENT_LIST = new HashMap<>();
@@ -45,6 +46,7 @@ public class Server {
         REQUEST_USER = new HashMap<>();
         bufferSize = currentBufferSize = 0;
         fileID = requestID = 0L;
+        PUBLIC_FILE_ID = new ArrayList<>();
         BUFFER = new byte[MAX_BUFFER_SIZE];
     }
 
@@ -261,12 +263,10 @@ public class Server {
                                 else {
                                     fileLocation = "./Clients/" + clientName + "/Public/" + fileName;
                                 }
-                                FILES_LOCATION.put(fileID, fileLocation);
-                                FILES_ID.put(fileLocation, fileID);
-                                FILES_NAME.put(fileID, fileName);
-                                fileID++;
+                                
+                                
 
-                                UReceiveFile receiveFile = new UReceiveFile(socket2, clientName, fileName, fileLocation, fileID, fileSize, bufferSize-fileSize);
+                                UReceiveFile receiveFile = new UReceiveFile(socket2, clientName, fileName, fileLocation, priv, fileSize, bufferSize-fileSize);
                                 receiveFile.start();
                             }
 
@@ -276,13 +276,25 @@ public class Server {
                         if (rd.equalsIgnoreCase("5")) {
                             Long fileID = in.readLong();
                             out.writeUTF("Download");
-                            String fileName = FILES_NAME.get(fileID);
-                            out.writeUTF(fileName);
-                            out.writeInt(MAX_CHUNK_SIZE);
+                            Boolean access = false;
+                            if (PUBLIC_FILE_ID.contains(fileID)) {
+                                access = true;
+                            }
+                            if (user.getPersonalFileIDList().contains(fileID)) {
+                                access = true;
+                            }
+                            out.writeBoolean(access);
 
-                            String fileLocation = FILES_LOCATION.get(fileID);
-                            DSendFile sendFile = new DSendFile(socket2, fileLocation, MAX_CHUNK_SIZE);
-                            sendFile.start();
+                            if (access) {
+                                String fileName = FILES_NAME.get(fileID);
+                                out.writeUTF(fileName);
+                                out.writeInt(MAX_CHUNK_SIZE);
+
+                                String fileLocation = FILES_LOCATION.get(fileID);
+                                DSendFile sendFile = new DSendFile(socket2, fileLocation, MAX_CHUNK_SIZE);
+                                sendFile.start();
+                            }
+                            
                         }
 
                         if (rd.equalsIgnoreCase("6")) {

@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.util.List;
 
 import src.Server.Server;
+import src.Server.User;
 
 public class UReceiveFile extends Thread {
 
@@ -21,9 +22,10 @@ public class UReceiveFile extends Thread {
     private int currentBufferSize;
     private String fileLocation;
     private String clientName;
+    private Boolean priv;
     
 
-    public UReceiveFile(Socket socket, String clientName, String fileName, String fileLocation, Long fileID, int fSize, int currentBufferSize) {
+    public UReceiveFile(Socket socket, String clientName, String fileName, String fileLocation, Boolean priv, int fSize, int currentBufferSize) {
         this.socket = socket;
         try {
             this.out = new DataOutputStream(this.socket.getOutputStream());
@@ -35,7 +37,7 @@ public class UReceiveFile extends Thread {
         this.fileLocation = fileLocation;
         this.fSize = fSize;
         this.currentBufferSize = currentBufferSize;
-        this.fileID = fileID;
+        this.priv = priv;
         this.clientName = clientName;
     }
 
@@ -66,19 +68,32 @@ public class UReceiveFile extends Thread {
                             Server.USER_LIST.get(client).addInbox(fileName + " uploaded by " + clientName + " with FileID: " + fileID);
                         }
                     }
+
+                    Server.FILES_LOCATION.put(Server.fileID, fileLocation);
+                    Server.FILES_ID.put(fileLocation, Server.fileID);
+                    Server.FILES_NAME.put(Server.fileID, fileName);
+                    if (!priv) {
+                        Server.PUBLIC_FILE_ID.add(fileID);
+                    }
+
+                    User user = Server.USER_LIST.get(clientName);
+                    user.addFileID(fileID);
                 }
                 else {
                     out.writeUTF("Upload Failed, chunk sizes didn't add up\n");
+                    dir.delete();
                 }
             }
             else {
                 out.writeUTF("Upload Failed\n");
+                dir.delete();
             }
-        
+            
             otp.close();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
+            Server.fileID++;
             for (int i = bufferStart+fSize+1; i < Server.MAX_BUFFER_SIZE; i++) {
                 Server.BUFFER[i-fSize] = Server.BUFFER[i];
             }
